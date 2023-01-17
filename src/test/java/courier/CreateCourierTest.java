@@ -1,14 +1,16 @@
+package courier;
+
+import io.qameta.allure.Description;
+import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import jdk.jfr.Description;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.jupiter.api.DisplayName;
 
-import static java.net.HttpURLConnection.*;
 import static io.restassured.RestAssured.given;
+import static java.net.HttpURLConnection.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class CreateCourierTest {
@@ -20,18 +22,17 @@ public class CreateCourierTest {
 
     @Before
     public void setUp() {
-        System.out.println("Before test");
         courier = new Courier("Oleg", "123456");
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru";
+        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru/";
     }
 
     @Test
-    @DisplayName("Check the creation of the courier.")
+    @DisplayName("Успешное создание курьера")
     @Description("Тест проверяет:\n" +
-            "- курьера можно создать;\n" +
-            "- чтобы создать курьера, нужно передать в ручку все обязательные поля;\n" +
-            "- запрос возвращает правильный код ответа;\n" +
-            "- успешный запрос возвращает ok: true.")
+            "1. Курьера можно создать;\n" +
+            "2. Чтобы создать курьера, нужно передать в ручку все обязательные поля;\n" +
+            "3. Запрос возвращает правильный код ответа;\n" +
+            "4. Успешный запрос возвращает ok: true.")
     public void createCourierSuccessfully() {
         given()
                 .contentType(ContentType.JSON)
@@ -47,10 +48,10 @@ public class CreateCourierTest {
     }
 
     @Test
-    @DisplayName("Check that you can't create two identical couriers.")
+    @DisplayName("Нельзя создать двух одинаковых курьеров")
     @Description("Тест проверяет:\n" +
-            "- нельзя создать двух одинаковых курьеров;\n" +
-            "- если создать пользователя с логином, который уже есть, возвращается ошибка.")
+            "1. Нельзя создать двух одинаковых курьеров;\n" +
+            "2. Если создать пользователя с логином, который уже есть, возвращается ошибка.")
     public void createForTwoIdenticalCouriersFailed() {
         given()
                 .contentType(ContentType.JSON)
@@ -78,6 +79,9 @@ public class CreateCourierTest {
     }
 
     @Test
+    @DisplayName("Нельзя создать курьера без логина")
+    @Description("Тест проверяет:\n" +
+            "1. Нельзя создать курьера без логина.")
     public void createWithoutLoginFailed() {
         courier.setLogin(null);
         given()
