@@ -1,9 +1,11 @@
 package order;
 
 import io.qameta.allure.Description;
+import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -12,13 +14,13 @@ import org.junit.runners.Parameterized;
 import java.util.List;
 
 import static io.restassured.RestAssured.given;
-import static java.net.HttpURLConnection.HTTP_CREATED;
 import static org.hamcrest.CoreMatchers.notNullValue;
 
 @RunWith(Parameterized.class)
 public class CreateOrderTest {
 
     public static final String ORDERS_URL = "/api/v1/orders";
+    public static final String BASE_URI = "https://qa-scooter.praktikum-services.ru/";
     private final String firstName;
     private final String lastName;
     private final String address;
@@ -44,7 +46,7 @@ public class CreateOrderTest {
 
     @Before
     public void setUp() {
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru/";
+        RestAssured.baseURI = BASE_URI;
     }
 
     @Parameterized.Parameters
@@ -66,15 +68,25 @@ public class CreateOrderTest {
             "4. Тело ответа содержит track.")
     public void orderCreateSuccessfully() {
         Order order = new Order(firstName, lastName, address, metroStation, phone, rentTime, deliveryDate, comment, color);
-        given()
+        Response response = sendPostRequest(order, ORDERS_URL);
+        compareResponseResultsNotNull(response, 201, "track");
+    }
+
+    @Step("Отправка POST запроса на ручку " + ORDERS_URL)
+    public Response sendPostRequest(Object object, String uri) {
+        return given()
                 .contentType(ContentType.JSON)
-                .body(order)
-                .when()
-                .post(ORDERS_URL)
-                .then()
-                .assertThat().body("track", notNullValue())
-                .assertThat().statusCode(201)
                 .and()
-                .statusCode(HTTP_CREATED);
+                .body(object)
+                .when()
+                .post(uri);
+    }
+
+    @Step("Сравниваем результат ответа с передаваемыми значениями для проверки, в том числе, notNullValue")
+    public void compareResponseResultsNotNull(Response response, int statusCode, String message) {
+        response.then()
+                .assertThat().statusCode(statusCode)
+                .and()
+                .assertThat().body(message, notNullValue());
     }
 }

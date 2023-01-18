@@ -1,6 +1,8 @@
 package courier;
 
+import com.github.javafaker.Faker;
 import io.qameta.allure.Description;
+import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -10,21 +12,22 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static io.restassured.RestAssured.given;
-import static java.net.HttpURLConnection.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 
 public class LoginCourierTest {
 
     public static final String COURIER_URI = "/api/v1/courier";
+    public static final String BASE_URI = "https://qa-scooter.praktikum-services.ru/";
 
     private int courierId;
     private Courier courier;
 
     @Before
     public void setUp() {
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru/";
-        courier = new Courier("Oleg", "123456");
+        Faker faker = new Faker();
+        RestAssured.baseURI = BASE_URI;
+        courier = new Courier(faker.name().firstName(), "123456");
         createCourier(courier);
     }
 
@@ -36,16 +39,8 @@ public class LoginCourierTest {
             "3. Успешный запрос возвращает id.")
     public void loginCourierSuccessfully() {
         courier.setFirstName(null);
-        given()
-                .contentType(ContentType.JSON)
-                .and()
-                .body(courier)
-                .when()
-                .post(COURIER_URI + "/login")
-                .then()
-                .assertThat().statusCode(200)
-                .assertThat().body("id", notNullValue())
-                .statusCode(HTTP_OK);
+        Response response = sendPostRequest(courier, COURIER_URI + "/login");
+        compareResponseResultsNotNull(response, 200, "id");
     }
 
     @Test
@@ -55,17 +50,8 @@ public class LoginCourierTest {
             "2. Если авторизоваться под несуществующим пользователем, запрос возвращает ошибку.")
     public void loginCourierWithIncorrectValueFailed() {
         courier.setLogin("Incorrect");
-        given()
-                .contentType(ContentType.JSON)
-                .and()
-                .body(courier)
-                .when()
-                .post(COURIER_URI + "/login")
-                .then()
-                .assertThat().statusCode(404)
-                .assertThat().body("message", equalTo("Учетная запись не найдена"))
-                .and()
-                .statusCode(HTTP_NOT_FOUND);
+        Response response = sendPostRequest(courier, COURIER_URI + "/login");
+        compareResponseResults(response, 404, "message", "Учетная запись не найдена");
     }
 
     @Test
@@ -74,18 +60,9 @@ public class LoginCourierTest {
             "1. Система вернёт ошибку, если неправильно указать пароль.")
     public void loginCourierWithIncorrectPasswordFailed() {
         courier.setPassword("00000");
-        given()
-                .contentType(ContentType.JSON)
-                .and()
-                .body(courier)
-                .when()
-                .post(COURIER_URI + "/login")
-                .then()
-                .assertThat().statusCode(404)
-                .assertThat().body("message", equalTo("Учетная запись не найдена"))
-                .and()
-                .statusCode(HTTP_NOT_FOUND);
-    }
+        Response response = sendPostRequest(courier, COURIER_URI + "/login");
+        compareResponseResults(response, 404, "message", "Учетная запись не найдена");
+     }
 
     @Test
     @DisplayName("Ошибка если не передать обязательное поле")
@@ -93,19 +70,45 @@ public class LoginCourierTest {
             "1. Если какого-то поля нет, запрос возвращает ошибку.")
     public void loginCourierWithoutPasswordFailed() {
         courier.setPassword("");
-        given()
-                .contentType(ContentType.JSON)
-                .and()
-                .body(courier)
-                .when()
-                .post(COURIER_URI + "/login")
-                .then()
-                .assertThat().statusCode(400)
-                .assertThat().body("message", equalTo("Недостаточно данных для входа"))
-                .and()
-                .statusCode(HTTP_BAD_REQUEST);
+        Response response = sendPostRequest(courier, COURIER_URI + "/login");
+        compareResponseResults(response, 400, "message", "Недостаточно данных для входа");
     }
 
+    @Step("Отправка POST запроса на ручку " + COURIER_URI)
+    public Response sendPostRequest(Object object, String uri) {
+        return given()
+                .contentType(ContentType.JSON)
+                .and()
+                .body(object)
+                .when()
+                .post(uri);
+    }
+
+    @Step("Отправка DELETE запроса на ручку " + COURIER_URI)
+    public Response sendDeleteRequest(Object object, String uri) {
+        return given()
+                .contentType(ContentType.JSON)
+                .and()
+                .body(object)
+                .when()
+                .delete(uri);
+    }
+
+    @Step("Сравниваем результат ответа с передаваемыми значениями для проверки")
+    public void compareResponseResults(Response response, int statusCode, String message, Object object) {
+        response.then()
+                .assertThat().statusCode(statusCode)
+                .and()
+                .assertThat().body(message, equalTo(object));
+    }
+
+    @Step("Сравниваем результат ответа с передаваемыми значениями для проверки, в том числе, notNullValue")
+    public void compareResponseResultsNotNull(Response response, int statusCode, String message) {
+        response.then()
+                .assertThat().statusCode(statusCode)
+                .and()
+                .assertThat().body(message, notNullValue());
+    }
 
     private void createCourier(Courier courier) {
         given()
@@ -122,28 +125,15 @@ public class LoginCourierTest {
     }
 
     private Response loginCourier(Courier courier) {
-        return given()
-                .contentType(ContentType.JSON)
-                .and()
-                .body(courier)
-                .when()
-                .post(COURIER_URI + "/login");
+        return sendPostRequest(courier, COURIER_URI + "/login");
     }
 
     @After
     public void deleteCourier() {
         if (courierId > 0) {
-            String json = String.format("{\"id\": \"%d\"}", courierId);
-            given()
-                    .contentType(ContentType.JSON)
-                    .and()
-                    .body(json)
-                    .when()
-                    .delete(COURIER_URI + "/" + courierId)
-                    .then()
-                    .assertThat().body("ok", equalTo(true))
-                    .and()
-                    .statusCode(HTTP_OK);
+            courier.setId(courierId);
+            Response response = sendDeleteRequest(courier, COURIER_URI + "/" + courierId);
+            compareResponseResults(response, 200, "ok", true);
         }
     }
 }

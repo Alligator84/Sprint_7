@@ -4,6 +4,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 
 public class Courier {
 
+    private int id;
     private String login;
     private String password;
     private String firstName;
@@ -12,6 +13,14 @@ public class Courier {
         this.login = RandomStringUtils.randomAlphanumeric(15);
         this.password = password;
         this.firstName = firstName;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getLogin() {
